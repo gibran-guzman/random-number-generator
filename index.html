@@ -12,39 +12,40 @@
       <h1 style="text-align: center">Generador de Números Aleatorios (LCG)</h1>
 
       <section class="controls">
-        <div class="field">
-          <label for="m">Módulo (m)</label>
-          <input id="m" type="number" step="1" value="16" min="2" />
+        <div class="input-group">
+          <div class="field">
+            <label for="m">Módulo (m)</label>
+            <input id="m" type="number" step="1" value="16" min="2" />
+          </div>
+          <div class="field">
+            <label for="a">Const. Multiplicativa (a)</label>
+            <input id="a" type="number" step="1" value="5" />
+          </div>
+          <div class="field">
+            <label for="c">Const. Aditiva (c)</label>
+            <input id="c" type="number" step="1" value="3" />
+          </div>
+          <div class="field">
+            <label for="seed">Semilla (X0)</label>
+            <input id="seed" type="number" step="1" value="7" min="0" />
+          </div>
+          <div class="field">
+            <label for="count">Cantidad (n)</label>
+            <input id="count" type="number" step="1" value="10" min="1" />
+          </div>
         </div>
-        <div class="field">
-          <label for="a">Const. Multiplicativa (a)</label>
-          <input id="a" type="number" step="1" value="5" />
-        </div>
-        <div class="field">
-          <label for="c">Const. Aditiva (c)</label>
-          <input id="c" type="number" step="1" value="3" />
-        </div>
-        <div class="field">
-          <label for="seed">Semilla (X0)</label>
-          <input id="seed" type="number" step="1" value="7" min="0" />
-        </div>
-        <div class="field">
-          <label for="count">Cantidad (n)</label>
-          <input id="count" type="number" step="1" value="10" min="1" />
-        </div>
-        <div class="field">
-          <label>&nbsp;</label>
+
+        <div class="action-group">
           <div class="buttons">
             <button id="generate">Generar</button>
             <button id="reset" class="secondary">Reiniciar</button>
           </div>
+          <div id="messages" aria-live="polite"></div>
         </div>
-
-        <div id="messages" aria-live="polite"></div>
       </section>
 
       <section class="output">
-        <h2>Resultados (X1..Xn)</h2>
+        <h2 style="text-align: center">Resultados (X1..Xn)</h2>
         <div id="results">
           <table id="table" aria-label="Tabla de números">
             <thead>
