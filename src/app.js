@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   const getById = (id) => document.getElementById(id);
-  const mInput = getById("m");
+  const mSelect = getById("m");
   const aInput = getById("a");
   const cInput = getById("c");
   const seedInput = getById("seed");
@@ -9,8 +9,49 @@ document.addEventListener("DOMContentLoaded", () => {
   const resetButton = getById("reset");
   const messageBox = getById("messages");
   const resultsTbody = document.querySelector("#table tbody");
-  const chartCtx = getById("scatterChart").getContext("2d");
-  const DEFAULTS = { m: 100, a: 19, c: 33, seed: 37, count: 10 };
+  const scatterChartElement = getById("scatterChart");
+  const chartCtx = scatterChartElement
+    ? scatterChartElement.getContext("2d")
+    : null;
+  const DEFAULTS = { m: "16", a: 13, c: 7, seed: 6, count: 100 };
+
+  // Función para obtener el exponente g dado m
+  function getExponent(m) {
+    return Math.log2(parseInt(m));
+  }
+
+  // Función para validar que un número no sea negativo
+  function validateNonNegative(input, fieldName) {
+    const value = parseFloat(input.value);
+    if (value < 0) {
+      input.value = Math.abs(value); // Convertir a positivo
+      setMessage(
+        `No se permiten números negativos en ${fieldName}. Se ha convertido a positivo.`
+      );
+      return false;
+    }
+    return true;
+  }
+
+  // Agregar validación en tiempo real para cada input
+  [
+    { input: aInput, name: "multiplicador a" },
+    { input: cInput, name: "constante c" },
+    { input: seedInput, name: "semilla X₀" },
+    { input: countInput, name: "cantidad n" },
+  ].forEach(({ input, name }) => {
+    input.addEventListener("input", () => validateNonNegative(input, name));
+  });
+
+  // Ya no necesitamos actualizar la información del módulo
+  mSelect.addEventListener("change", () => {
+    // Solo validar el cambio del módulo
+    const m = parseInt(mSelect.value);
+    if (m) {
+      setMessage("", false);
+    }
+  });
+
   function setMessage(text = "", isError = true) {
     messageBox.textContent = text;
     messageBox.style.color = isError ? "var(--danger)" : "green";
@@ -18,18 +59,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function isIntegerString(value) {
     if (value === "" || value === null || value === undefined) return false;
-    return /^-?\d+$/.test(String(value).trim());
+    return /^\d+$/.test(String(value).trim());
+  }
+
+  function isPowerOfTwo(n) {
+    return n > 0 && (n & (n - 1)) === 0;
+  }
+
+  function gcd(a, b) {
+    return b === 0 ? a : gcd(b, a % b);
+  }
+
+  function isRelativelyPrime(a, b) {
+    return gcd(a, b) === 1;
   }
 
   function parseAndValidateInputs() {
-    const mVal = mInput.value;
+    const mVal = mSelect.value;
     const aVal = aInput.value;
     const cVal = cInput.value;
     const seedVal = seedInput.value;
     const countVal = countInput.value;
 
     if (![mVal, aVal, cVal, seedVal, countVal].every(isIntegerString)) {
-      setMessage("Todos los parámetros deben ser enteros.");
+      setMessage("Todos los parámetros deben ser enteros positivos.");
       return null;
     }
 
@@ -39,28 +92,33 @@ document.addEventListener("DOMContentLoaded", () => {
     const seed = Number(seedVal);
     const count = Number(countVal);
 
-    if (!(Number.isInteger(m) && m > 1)) {
-      setMessage("El módulo m debe ser entero mayor que 1.");
+    // Verificar que a = 1 + 4k donde k es entero
+    if ((a - 1) % 4 !== 0) {
+      const sugerencia = Math.floor((a - 1) / 4);
+      const valorSugerido = 1 + 4 * sugerencia;
+      setMessage(
+        `El multiplicador a debe ser de la forma 1 + 4k donde k es entero. Prueba con a = ${valorSugerido} (k = ${sugerencia}) o a = ${
+          valorSugerido + 4
+        } (k = ${sugerencia + 1}).`
+      );
       return null;
     }
 
-    if (
-      !Number.isInteger(a) ||
-      !Number.isInteger(c) ||
-      !Number.isInteger(seed) ||
-      !Number.isInteger(count)
-    ) {
-      setMessage("Parámetros deben ser enteros.");
+    // Verificar que c sea impar
+    if (c % 2 === 0) {
+      setMessage("La constante aditiva c debe ser impar.");
       return null;
     }
 
+    // Verificar que c sea relativamente primo a m
+    if (!isRelativelyPrime(c, m)) {
+      setMessage("La constante c debe ser relativamente prima a m.");
+      return null;
+    }
+
+    // Verificar que la semilla esté en el rango correcto
     if (seed < 0 || seed >= m) {
-      setMessage("La semilla debe cumplir 0 ≤ semilla < m.");
-      return null;
-    }
-
-    if (count <= 0) {
-      setMessage("La cantidad debe ser al menos 1.");
+      setMessage(`La semilla debe cumplir 0 ≤ semilla < ${m}.`);
       return null;
     }
 
@@ -77,7 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
             label: "u_k",
             data: [],
             pointRadius: 4,
-            backgroundColor: "rgba(43,108,176,0.9)",
+            backgroundColor: "#2B7FFF",
           },
         ],
       },
@@ -150,7 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
     for (let k = 0; k < count; k++) {
       X = (a * X + c) % m;
       X = Math.floor(X);
-      const u = X / (m - 1);
+      const u = X / m; // Usando m como denominador para obtener valores en [0,1)
       results.push({ X, u });
     }
 
@@ -160,7 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function resetToDefaults() {
-    mInput.value = DEFAULTS.m;
+    mSelect.value = DEFAULTS.m;
     aInput.value = DEFAULTS.a;
     cInput.value = DEFAULTS.c;
     seedInput.value = DEFAULTS.seed;

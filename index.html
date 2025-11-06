@@ -4,6 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Generador de Números Aleatorios (LCG)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="src/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
@@ -14,24 +20,62 @@
       <section class="controls">
         <div class="input-group">
           <div class="field">
-            <label for="m">Módulo (m)</label>
-            <input id="m" type="number" step="1" value="16" min="2" />
+            <label for="m">Módulo (m = 2ᵍ)</label>
+            <select id="m">
+              <option value="4">4 (2²)</option>
+              <option value="8">8 (2³)</option>
+              <option value="16" selected>16 (2⁴)</option>
+              <option value="32">32 (2⁵)</option>
+              <option value="64">64 (2⁶)</option>
+              <option value="128">128 (2⁷)</option>
+              <option value="256">256 (2⁸)</option>
+            </select>
           </div>
           <div class="field">
-            <label for="a">Const. Multiplicativa (a)</label>
-            <input id="a" type="number" step="1" value="5" />
+            <label for="a">Const. Multiplicativa (a = 1 + 4k)</label>
+            <input
+              id="a"
+              type="number"
+              step="4"
+              value="13"
+              title="Ejemplos: k=1 → a=5, k=2 → a=9, k=3 → a=13"
+              onkeydown="return event.keyCode !== 189"
+            />
           </div>
           <div class="field">
             <label for="c">Const. Aditiva (c)</label>
-            <input id="c" type="number" step="1" value="3" />
+            <input
+              id="c"
+              type="number"
+              step="2"
+              value="3"
+              min="0"
+              title="Debe ser impar y relativamente primo a m"
+              onkeydown="return event.keyCode !== 189"
+            />
           </div>
           <div class="field">
-            <label for="seed">Semilla (X0)</label>
-            <input id="seed" type="number" step="1" value="7" min="0" />
+            <label for="seed">Semilla (X₀)</label>
+            <input
+              id="seed"
+              type="number"
+              step="1"
+              value="7"
+              min="0"
+              title="0 ≤ X₀ < m"
+              onkeydown="return event.keyCode !== 189"
+            />
           </div>
           <div class="field">
             <label for="count">Cantidad (n)</label>
-            <input id="count" type="number" step="1" value="10" min="1" />
+            <input
+              id="count"
+              type="number"
+              step="1"
+              value="10"
+              min="1"
+              onkeydown="return event.keyCode !== 189"
+            />
           </div>
         </div>
 
@@ -45,7 +89,7 @@
       </section>
 
       <section class="output">
-        <h2 style="text-align: center">Resultados (X1..Xn)</h2>
+        <h2 style="text-align: center">Resultados (X₁..Xₙ)</h2>
         <div id="results">
           <table id="table" aria-label="Tabla de números">
             <thead>
