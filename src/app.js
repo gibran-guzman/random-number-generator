@@ -15,16 +15,14 @@ document.addEventListener("DOMContentLoaded", () => {
     : null;
   const DEFAULTS = { m: "16", a: 13, c: 7, seed: 6, count: 100 };
 
-  // Función para obtener el exponente g dado m
   function getExponent(m) {
     return Math.log2(parseInt(m));
   }
 
-  // Función para validar que un número no sea negativo
   function validateNonNegative(input, fieldName) {
     const value = parseFloat(input.value);
     if (value < 0) {
-      input.value = Math.abs(value); // Convertir a positivo
+      input.value = Math.abs(value);
       setMessage(
         `No se permiten números negativos en ${fieldName}. Se ha convertido a positivo.`
       );
@@ -33,19 +31,43 @@ document.addEventListener("DOMContentLoaded", () => {
     return true;
   }
 
-  // Agregar validación en tiempo real para cada input
+  function nextPowerOf2(n) {
+    return Math.pow(2, Math.ceil(Math.log2(n)));
+  }
+
+  function updateModuleBasedOnCount() {
+    const count = parseInt(countInput.value);
+    if (!isNaN(count) && count > 0) {
+      const requiredM = nextPowerOf2(count);
+      const options = Array.from(mSelect.options);
+      const bestOption = options.reduce((prev, curr) => {
+        const prevDiff = Math.abs(parseInt(prev.value) - requiredM);
+        const currDiff = Math.abs(parseInt(curr.value) - requiredM);
+        return currDiff < prevDiff ? curr : prev;
+      });
+      mSelect.value = bestOption.value;
+      setMessage(
+        `Se ha ajustado el módulo a ${bestOption.value} para acomodar ${count} números.`,
+        false
+      );
+    }
+  }
+
   [
     { input: aInput, name: "multiplicador a" },
     { input: cInput, name: "constante c" },
     { input: seedInput, name: "semilla X₀" },
-    { input: countInput, name: "cantidad n" },
   ].forEach(({ input, name }) => {
     input.addEventListener("input", () => validateNonNegative(input, name));
   });
 
-  // Ya no necesitamos actualizar la información del módulo
+  countInput.addEventListener("input", () => {
+    if (validateNonNegative(countInput, "cantidad n")) {
+      updateModuleBasedOnCount();
+    }
+  });
+
   mSelect.addEventListener("change", () => {
-    // Solo validar el cambio del módulo
     const m = parseInt(mSelect.value);
     if (m) {
       setMessage("", false);
@@ -92,7 +114,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const seed = Number(seedVal);
     const count = Number(countVal);
 
-    // Verificar que a = 1 + 4k donde k es entero
     if ((a - 1) % 4 !== 0) {
       const sugerencia = Math.floor((a - 1) / 4);
       const valorSugerido = 1 + 4 * sugerencia;
@@ -104,19 +125,16 @@ document.addEventListener("DOMContentLoaded", () => {
       return null;
     }
 
-    // Verificar que c sea impar
     if (c % 2 === 0) {
       setMessage("La constante aditiva c debe ser impar.");
       return null;
     }
 
-    // Verificar que c sea relativamente primo a m
     if (!isRelativelyPrime(c, m)) {
       setMessage("La constante c debe ser relativamente prima a m.");
       return null;
     }
 
-    // Verificar que la semilla esté en el rango correcto
     if (seed < 0 || seed >= m) {
       setMessage(`La semilla debe cumplir 0 ≤ semilla < ${m}.`);
       return null;
@@ -208,7 +226,7 @@ document.addEventListener("DOMContentLoaded", () => {
     for (let k = 0; k < count; k++) {
       X = (a * X + c) % m;
       X = Math.floor(X);
-      const u = X / m; // Usando m como denominador para obtener valores en [0,1)
+      const u = X / m;
       results.push({ X, u });
     }
 
