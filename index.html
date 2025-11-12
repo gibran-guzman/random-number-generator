@@ -20,7 +20,30 @@
       <section class="controls">
         <div class="input-group">
           <div class="field">
-            <label for="m">Módulo (m = 2ᵍ)</label>
+            <label for="a">Multiplicador (a)</label>
+            <input
+              id="a"
+              type="number"
+              step="4"
+              value="17"
+              title="a = 1 + 4k (k entero)"
+              onkeydown="return event.keyCode !== 189"
+            />
+          </div>
+          <div class="field">
+            <label for="c">Incremento (c)</label>
+            <input
+              id="c"
+              type="number"
+              step="1"
+              value="1"
+              min="0"
+              title="c impar y relativamente primo a m"
+              onkeydown="return event.keyCode !== 189"
+            />
+          </div>
+          <div class="field">
+            <label for="m">Módulo (m) = 2^g</label>
             <select id="m">
               <option value="4">4 (2²)</option>
               <option value="8">8 (2³)</option>
@@ -32,42 +55,19 @@
             </select>
           </div>
           <div class="field">
-            <label for="a">Const. Multiplicativa (a = 1 + 4k)</label>
-            <input
-              id="a"
-              type="number"
-              step="4"
-              value="13"
-              title="Ejemplos: k=1 → a=5, k=2 → a=9, k=3 → a=13"
-              onkeydown="return event.keyCode !== 189"
-            />
-          </div>
-          <div class="field">
-            <label for="c">Const. Aditiva (c)</label>
-            <input
-              id="c"
-              type="number"
-              step="2"
-              value="3"
-              min="0"
-              title="Debe ser impar y relativamente primo a m"
-              onkeydown="return event.keyCode !== 189"
-            />
-          </div>
-          <div class="field">
             <label for="seed">Semilla (X₀)</label>
             <input
               id="seed"
               type="number"
               step="1"
-              value="7"
+              value="1"
               min="0"
               title="0 ≤ X₀ < m"
               onkeydown="return event.keyCode !== 189"
             />
           </div>
           <div class="field">
-            <label for="count">Cantidad (n)</label>
+            <label for="count">Cantidad</label>
             <input
               id="count"
               type="number"
@@ -81,7 +81,7 @@
 
         <div class="action-group">
           <div class="buttons">
-            <button id="generate">Generar</button>
+            <button id="generate">Generar Números</button>
             <button id="reset" class="secondary">Reiniciar</button>
           </div>
           <div id="messages" aria-live="polite"></div>
@@ -109,6 +109,53 @@
             aria-label="Diagrama de dispersión"
           ></canvas>
         </div>
+
+        <!-- Sección de Validación -->
+        <section
+          class="validation-section"
+          id="validationSection"
+          style="display: none"
+        >
+          <h2 style="text-align: center">
+            Validación de los números generados
+          </h2>
+
+          <div class="validation-tests">
+            <div class="test-item" id="independenceTestItem">
+              <span class="test-icon" id="independenceIcon">⏳</span>
+              <div class="test-content">
+                <h3>Prueba de Independencia</h3>
+                <p id="independenceDetails">
+                  Verificando correlación entre números consecutivos...
+                </p>
+              </div>
+            </div>
+
+            <div class="test-item" id="uniformityTestItem">
+              <span class="test-icon" id="uniformityIcon">⏳</span>
+              <div class="test-content">
+                <h3>Prueba de Uniformidad</h3>
+                <p id="uniformityDetails">
+                  Verificando distribución uniforme en [0,1]...
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="validation-result" id="validationResult">
+            <div class="result-badge" id="resultBadge">
+              <span class="badge-icon" id="badgeIcon">⏳</span>
+              <span class="badge-text" id="badgeText">Analizando...</span>
+            </div>
+            <p id="resultMessage">Ejecutando pruebas estadísticas...</p>
+          </div>
+
+          <div class="validation-actions">
+            <button id="regenerateBtn" class="secondary" style="display: none">
+              🔄 Regenerar Números
+            </button>
+          </div>
+        </section>
       </section>
 
       <footer>

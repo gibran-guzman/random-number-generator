@@ -13,7 +13,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const chartCtx = scatterChartElement
     ? scatterChartElement.getContext("2d")
     : null;
-  const DEFAULTS = { m: "16", a: 13, c: 7, seed: 6, count: 100 };
+  const DEFAULTS = { m: "16", a: 17, c: 1, seed: 1, count: 10 };
+  const mHelp = getById("mHelp");
+  const seedHelp = getById("seedHelp");
+  const countHelp = getById("countHelp");
+
+  const validationSection = getById("validationSection");
+  const independenceIcon = getById("independenceIcon");
+  const uniformityIcon = getById("uniformityIcon");
+  const independenceDetails = getById("independenceDetails");
+  const uniformityDetails = getById("uniformityDetails");
+  const resultBadge = getById("resultBadge");
+  const badgeIcon = getById("badgeIcon");
+  const badgeText = getById("badgeText");
+  const resultMessage = getById("resultMessage");
+  const regenerateBtn = getById("regenerateBtn");
+
+  let lastResults = [];
 
   function getExponent(m) {
     return Math.log2(parseInt(m));
@@ -50,6 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
         `Se ha ajustado el módulo a ${bestOption.value} para acomodar ${count} números.`,
         false
       );
+      updateMRelatedHelp();
     }
   }
 
@@ -72,7 +89,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (m) {
       setMessage("", false);
     }
+    updateMRelatedHelp();
   });
+
+  function updateMRelatedHelp() {
+    const m = parseInt(mSelect.value);
+    if (m && isPowerOfTwo(m)) {
+      const g = getExponent(m);
+      if (mHelp) mHelp.textContent = `Auto: ${m} | g = ${g} | m = 2^${g}`;
+      if (seedHelp) seedHelp.textContent = `0 ≤ semilla < ${m}`;
+      if (countHelp) countHelp.textContent = `Números a generar (g = ${g})`;
+    }
+  }
 
   function setMessage(text = "", isError = true) {
     messageBox.textContent = text;
@@ -114,24 +142,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const seed = Number(seedVal);
     const count = Number(countVal);
 
-    if ((a - 1) % 4 !== 0) {
-      const sugerencia = Math.floor((a - 1) / 4);
-      const valorSugerido = 1 + 4 * sugerencia;
-      setMessage(
-        `El multiplicador a debe ser de la forma 1 + 4k donde k es entero. Prueba con a = ${valorSugerido} (k = ${sugerencia}) o a = ${
-          valorSugerido + 4
-        } (k = ${sugerencia + 1}).`
-      );
-      return null;
-    }
-
     if (c % 2 === 0) {
-      setMessage("La constante aditiva c debe ser impar.");
+      setMessage("El incremento c debe ser impar.");
       return null;
     }
 
     if (!isRelativelyPrime(c, m)) {
-      setMessage("La constante c debe ser relativamente prima a m.");
+      setMessage("El incremento c debe ser relativamente primo a m.");
       return null;
     }
 
@@ -140,7 +157,19 @@ document.addEventListener("DOMContentLoaded", () => {
       return null;
     }
 
-    setMessage("", false);
+    if ((a - 1) % 4 !== 0) {
+      const sugerencia = Math.floor((a - 1) / 4);
+      const valorSugerido = 1 + 4 * sugerencia;
+      setMessage(
+        `⚠️ Advertencia: Para periodo máximo, a debe ser 1+4k. Sugerencia: a=${valorSugerido} (k=${sugerencia}) o a=${
+          valorSugerido + 4
+        } (k=${sugerencia + 1}). Generando de todas formas...`,
+        false
+      );
+    } else {
+      setMessage("", false);
+    }
+
     return { m, a, c, seed, count };
   }
 
@@ -205,6 +234,135 @@ document.addEventListener("DOMContentLoaded", () => {
     scatterChart.update();
   }
 
+  function testIndependence(uValues) {
+    const n = uValues.length;
+    if (n < 2)
+      return { pass: false, message: "Se requieren al menos 2 valores" };
+
+    const mean = uValues.reduce((s, v) => s + v, 0) / n;
+    let num = 0;
+    let den = 0;
+
+    for (let i = 0; i < n - 1; i++) {
+      num += (uValues[i] - mean) * (uValues[i + 1] - mean);
+    }
+    for (let i = 0; i < n; i++) {
+      den += (uValues[i] - mean) * (uValues[i] - mean);
+    }
+
+    if (den === 0)
+      return {
+        pass: false,
+        r: 0,
+        threshold: 0,
+        message:
+          "Varianza cero: todos los valores son iguales (falla independencia)",
+      };
+
+    const r = num / den;
+    const threshold = 1.96 / Math.sqrt(n);
+    const pass = Math.abs(r) <= threshold;
+
+    return {
+      pass,
+      r: r.toFixed(4),
+      threshold: threshold.toFixed(4),
+      message: pass ? `No se detecta correlación` : `Correlación detectada`,
+    };
+  }
+
+  function testUniformity(uValues) {
+    const n = uValues.length;
+    if (n < 2)
+      return { pass: false, message: "Se requieren al menos 2 valores" };
+
+    const sorted = [...uValues].sort((a, b) => a - b);
+    let dPlus = -Infinity;
+    let dMinus = -Infinity;
+
+    for (let i = 0; i < n; i++) {
+      const ui = sorted[i];
+      const i1 = (i + 1) / n;
+      dPlus = Math.max(dPlus, i1 - ui);
+      dMinus = Math.max(dMinus, ui - i / n);
+    }
+
+    const d = Math.max(dPlus, dMinus);
+    const lambda = (Math.sqrt(n) + 0.12 + 0.11 / Math.sqrt(n)) * d;
+
+    let sum = 0;
+    for (let j = 1; j <= 100; j++) {
+      const term = Math.pow(-1, j - 1) * Math.exp(-2 * j * j * lambda * lambda);
+      sum += term;
+      if (Math.abs(term) < 1e-8) break;
+    }
+
+    const pValue = Math.max(0, Math.min(1, 2 * sum));
+    const pass = pValue >= 0.05;
+
+    return {
+      pass,
+      d: d.toFixed(4),
+      pValue: pValue.toFixed(4),
+      message: pass
+        ? `Distribución con uniformidad`
+        : `Distribución no uniforme`,
+    };
+  }
+
+  function runValidationTests(results) {
+    if (!results || results.length < 2) {
+      if (validationSection) validationSection.style.display = "none";
+      return;
+    }
+
+    if (validationSection) validationSection.style.display = "block";
+
+    const uValues = results.map((r) => r.u);
+
+    const indTest = testIndependence(uValues);
+    if (independenceIcon) {
+      independenceIcon.textContent = indTest.pass ? "✓" : "✗";
+      independenceIcon.className = `test-icon ${
+        indTest.pass ? "pass" : "fail"
+      }`;
+    }
+    if (independenceDetails) {
+      independenceDetails.textContent = indTest.message;
+    }
+
+    const unifTest = testUniformity(uValues);
+    if (uniformityIcon) {
+      uniformityIcon.textContent = unifTest.pass ? "✓" : "✗";
+      uniformityIcon.className = `test-icon ${unifTest.pass ? "pass" : "fail"}`;
+    }
+    if (uniformityDetails) {
+      uniformityDetails.textContent = unifTest.message;
+    }
+
+    const allPass = indTest.pass && unifTest.pass;
+    if (resultBadge) {
+      resultBadge.className = `result-badge ${allPass ? "valid" : "invalid"}`;
+    }
+    if (badgeIcon) {
+      badgeIcon.textContent = allPass ? "✓" : "✗";
+    }
+    if (badgeText) {
+      badgeText.textContent = allPass
+        ? "Números Válidos"
+        : "Números No Válidos";
+    }
+    if (resultMessage) {
+      resultMessage.textContent = allPass
+        ? "Los números generados cumplen con las pruebas de independencia y uniformidad."
+        : "Los números no cumplen con todas las pruebas. Se recomienda regenerar con diferentes parámetros.";
+    }
+
+    if (regenerateBtn) {
+      regenerateBtn.style.display = allPass ? "none" : "inline-block";
+    }
+  }
+
   function handleGenerate() {
     const params = parseAndValidateInputs();
     if (!params) return;
@@ -233,6 +391,9 @@ document.addEventListener("DOMContentLoaded", () => {
     renderResultsTable(results);
     updateScatterChart(results);
     setMessage(`Generados ${count} números.`, false);
+
+    lastResults = results;
+    runValidationTests(results);
   }
 
   function resetToDefaults() {
@@ -246,6 +407,10 @@ document.addEventListener("DOMContentLoaded", () => {
     scatterChart.data.datasets[0].data = [];
     scatterChart.update();
     setMessage("Valores restablecidos.", false);
+    updateMRelatedHelp();
+
+    lastResults = [];
+    if (validationSection) validationSection.style.display = "none";
   }
 
   generateButton.addEventListener("click", (e) => {
@@ -258,5 +423,13 @@ document.addEventListener("DOMContentLoaded", () => {
     resetToDefaults();
   });
 
+  if (regenerateBtn) {
+    regenerateBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      handleGenerate();
+    });
+  }
+
   resetToDefaults();
+  updateMRelatedHelp();
 });
