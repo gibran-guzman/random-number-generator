@@ -21,8 +21,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const validationSection = getById("validationSection");
   const independenceIcon = getById("independenceIcon");
   const uniformityIcon = getById("uniformityIcon");
+  const meanIcon = getById("meanIcon");
+  const varianceIcon = getById("varianceIcon");
   const independenceDetails = getById("independenceDetails");
   const uniformityDetails = getById("uniformityDetails");
+  const meanDetails = getById("meanDetails");
+  const varianceDetails = getById("varianceDetails");
   const resultBadge = getById("resultBadge");
   const badgeIcon = getById("badgeIcon");
   const badgeText = getById("badgeText");
@@ -310,6 +314,66 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  function testMean(uValues) {
+    const n = uValues.length;
+    if (n < 2)
+      return { pass: false, message: "Se requieren al menos 2 valores" };
+
+    const mean = uValues.reduce((s, v) => s + v, 0) / n;
+    const expectedMean = 0.5;
+    const variance = 1 / (12 * n);
+    const stdDev = Math.sqrt(variance);
+
+    // Estadístico Z
+    const z = (mean - expectedMean) / stdDev;
+
+    // Valor crítico para α = 0.05 (bilateral)
+    const zCritical = 1.96;
+    const pass = Math.abs(z) <= zCritical;
+
+    return {
+      pass,
+      mean: mean.toFixed(4),
+      z: z.toFixed(4),
+      zCritical: zCritical.toFixed(2),
+      message: pass
+        ? `Media aceptable (μ = ${mean.toFixed(4)})`
+        : `Media fuera de rango (μ = ${mean.toFixed(4)})`,
+    };
+  }
+
+  function testVariance(uValues) {
+    const n = uValues.length;
+    if (n < 2)
+      return { pass: false, message: "Se requieren al menos 2 valores" };
+
+    const mean = uValues.reduce((s, v) => s + v, 0) / n;
+    const variance =
+      uValues.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / (n - 1);
+    const expectedVariance = 1 / 12;
+
+    // Estadístico Chi-cuadrado
+    const chiSquared = ((n - 1) * variance) / expectedVariance;
+
+    // Valores críticos aproximados para α = 0.05 (bilateral)
+    // χ²(α/2, n-1) y χ²(1-α/2, n-1)
+    const chiLower = Math.max(0, (n - 1) * (1 - 1.96 / Math.sqrt(2 * (n - 1))));
+    const chiUpper = (n - 1) * (1 + 1.96 / Math.sqrt(2 * (n - 1)));
+
+    const pass = chiSquared >= chiLower && chiSquared <= chiUpper;
+
+    return {
+      pass,
+      variance: variance.toFixed(4),
+      chiSquared: chiSquared.toFixed(4),
+      chiLower: chiLower.toFixed(2),
+      chiUpper: chiUpper.toFixed(2),
+      message: pass
+        ? `Varianza aceptable (σ² = ${variance.toFixed(4)})`
+        : `Varianza fuera de rango (σ² = ${variance.toFixed(4)})`,
+    };
+  }
+
   function runValidationTests(results) {
     if (!results || results.length < 2) {
       if (validationSection) validationSection.style.display = "none";
@@ -328,7 +392,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }`;
     }
     if (independenceDetails) {
-      independenceDetails.textContent = indTest.message;
+      independenceDetails.textContent = `${indTest.message} | r = ${indTest.r} | umbral = ${indTest.threshold}`;
     }
 
     const unifTest = testUniformity(uValues);
@@ -337,10 +401,29 @@ document.addEventListener("DOMContentLoaded", () => {
       uniformityIcon.className = `test-icon ${unifTest.pass ? "pass" : "fail"}`;
     }
     if (uniformityDetails) {
-      uniformityDetails.textContent = unifTest.message;
+      uniformityDetails.textContent = `${unifTest.message} | D = ${unifTest.d} | p = ${unifTest.pValue}`;
     }
 
-    const allPass = indTest.pass && unifTest.pass;
+    const meanTest = testMean(uValues);
+    if (meanIcon) {
+      meanIcon.textContent = meanTest.pass ? "✓" : "✗";
+      meanIcon.className = `test-icon ${meanTest.pass ? "pass" : "fail"}`;
+    }
+    if (meanDetails) {
+      meanDetails.textContent = meanTest.message;
+    }
+
+    const varTest = testVariance(uValues);
+    if (varianceIcon) {
+      varianceIcon.textContent = varTest.pass ? "✓" : "✗";
+      varianceIcon.className = `test-icon ${varTest.pass ? "pass" : "fail"}`;
+    }
+    if (varianceDetails) {
+      varianceDetails.textContent = varTest.message;
+    }
+
+    const allPass =
+      indTest.pass && unifTest.pass && meanTest.pass && varTest.pass;
     if (resultBadge) {
       resultBadge.className = `result-badge ${allPass ? "valid" : "invalid"}`;
     }
@@ -354,7 +437,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (resultMessage) {
       resultMessage.textContent = allPass
-        ? "Los números generados cumplen con las pruebas de independencia y uniformidad."
+        ? "Los números generados cumplen con todas las pruebas estadísticas (independencia, uniformidad, media y varianza)."
         : "Los números no cumplen con todas las pruebas. Se recomienda regenerar con diferentes parámetros.";
     }
 
